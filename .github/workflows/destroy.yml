@@ -25,4 +25,3 @@ jobs:
 
       - name: Destroy Terraform infrastructure
         run: terraform destroy -auto-approve
-
