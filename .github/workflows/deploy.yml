@@ -35,6 +35,3 @@ jobs:
       id: apply
       run: terraform apply -auto-approve
 
-    # Optional destroy step
-    - name: Destroy Terraform resources
-      run: terraform destroy -auto-approve

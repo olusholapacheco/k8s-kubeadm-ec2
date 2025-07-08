@@ -1,0 +1,11 @@
+name: Destroy Kubernetes Cluster
+
+on:
+  workflow_dispatch:
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Destroy Terraform resources
+        run: terraform destroy -auto-approve
