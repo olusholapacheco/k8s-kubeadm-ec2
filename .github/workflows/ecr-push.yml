@@ -1,14 +1,9 @@
-name: Build Docker Image and Push to AWS ECR
+name: Build Docker Image and Push Docker Image to ECR
 
 on:
   push:
-    branches: 
+    branches:
       - main
-    paths:
-      - 'app.py'
-      - 'Dockerfile'
-      - 'requirements.txt'
-      - '.github/workflows/ecr-push.yml'
 
 jobs:
   build-and-push:
@@ -19,8 +14,8 @@ jobs:
       ECR_REPOSITORY: kube-explorer
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Checkout source
+        uses: actions/checkout@v4
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -29,26 +24,28 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Create ECR repository 
+      - name: Log in to Amazon ECR
+        id: login-ecr
         run: |
-          aws ecr describe-repositories \
-            --repository-names $ECR_REPOSITORY \
-            --region $AWS_REGION || \
-          aws ecr create-repository \
-            --repository-name $ECR_REPOSITORY \
-            --region $AWS_REGION
+          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com
 
-      - name: Get ECR login
+      - name: Create ECR repository (if it doesn't exist)
         run: |
-          aws ecr get-login-password --region $AWS_REGION | \
-          docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${AWS_REGION}.amazonaws.com
+          aws ecr describe-repositories --repository-names $ECR_REPOSITORY || \
+          aws ecr create-repository --repository-name $ECR_REPOSITORY
 
-      - name: Build, tag, and push Docker image
+      - name: Build Docker image
         run: |
-          IMAGE_URI=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:latest
-          docker build -t $IMAGE_URI .
-          docker push $IMAGE_URI
+          docker build -t $ECR_REPOSITORY:latest .
 
-      - name: Output image URL
-        run: echo "Image pushed to: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:latest"
+      - name: Tag Docker image for ECR
+        run: |
+          docker tag $ECR_REPOSITORY:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest
 
+      - name: Push Docker image to Amazon ECR
+        run: |
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest
+
+      - name: Output ECR image URI
+        run: |
+          echo "Image pushed to: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest"
