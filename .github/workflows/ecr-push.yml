@@ -1,4 +1,4 @@
-name: Build docker image and Push to ECR
+name: Build and Push to ECR
 
 on:
   push:
@@ -38,14 +38,15 @@ jobs:
         run: docker build -t $ECR_REPOSITORY:latest -f kube-explorer/Dockerfile kube-explorer
 
       - name: Tag Docker image
+        id: tag-image
         run: |
           IMAGE_URI=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest
           docker tag $ECR_REPOSITORY:latest $IMAGE_URI
           echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
 
       - name: Push Docker image to ECR
-        run: |
-          docker push $IMAGE_URI
+        run: docker push ${{ env.IMAGE_URI }}
 
       - name: Output Image URI
-        run: echo "Image pushed to: $IMAGE_URI"
+        run: |
+          echo "Image pushed to: ${{ env.IMAGE_URI }}"
