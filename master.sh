@@ -123,6 +123,9 @@ sleep 120
 #to copy kube config file to s3
 # aws s3 cp /etc/kubernetes/admin.conf s3://${s3bucket_name}
 
+# ✅ NEW: Upload Kubeconfig for GitHub Actions to use kube
+aws s3 cp /tmp/admin.conf s3://${s3bucket_name}/admin.conf
+
 export KUBECONFIG=/root/.kube/config
 # install helm
 curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
