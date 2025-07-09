@@ -1,0 +1,52 @@
+name: Build and Push Docker Image to ECR
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - Dockerfile
+      - app.py
+      - requirements.txt
+      - .github/workflows/ecr-push.yml
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION: eu-west-1
+      ECR_REPOSITORY: kube-explorer
+      IMAGE_TAG: latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Get ECR Repository URI
+        id: ecr
+        run: |
+          REPO_URI=$(aws ecr describe-repositories \
+            --repository-names $ECR_REPOSITORY \
+            --region $AWS_REGION \
+            --query 'repositories[0].repositoryUri' --output text)
+          echo "REPO_URI=$REPO_URI" >> $GITHUB_ENV
+
+      - name: Build Docker image
+        run: |
+          docker build -t $REPO_URI:$IMAGE_TAG .
+
+      - name: Push Docker image to ECR
+        run: |
+          docker push $REPO_URI:$IMAGE_TAG
